@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050505" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="Black Banner Road" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+  <title>Black Banner Road</title>
+  <style>
+    :root {
+      --bg: #050505;
+      --panel: #0f0f0f;
+      --line: #3f3f3f;
+      --ink: #f2f2f2;
+      --muted: #b8b8b8;
+      --dice: #101010;
+      --dot: #f2f2f2;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 10%, #141414 0%, #050505 45%),
+        linear-gradient(160deg, #040404, #0a0a0a);
+      color: var(--ink);
+      font-family: "Courier New", Courier, monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .game {
+      width: min(1120px, 100%);
+      height: min(96vh, 920px);
+      border: 1px solid var(--line);
+      background: rgba(7, 7, 7, 0.94);
+      box-shadow: 0 0 0 1px #000, 0 0 40px rgba(255, 255, 255, 0.04);
+      display: grid;
+      grid-template-columns: 320px 1fr 280px;
+      overflow: hidden;
+    }
+
+    .left,
+    .right { padding: 16px; }
+
+    .left {
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, #0c0c0c 0%, #080808 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .right {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .log-col {
+      border-left: 1px solid var(--line);
+      background: linear-gradient(180deg, #0c0c0c 0%, #080808 100%);
+      padding: 16px;
+      min-height: 0;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 12px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: #0a0a0a;
+      padding: 10px;
+      margin-bottom: 0;
+    }
+
+    .quick-nav {
+      display: none;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .quick-nav button {
+      padding: 8px;
+      text-align: center;
+      font-size: 0.78rem;
+    }
+
+    .panel-title {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 0.73rem;
+      margin-bottom: 8px;
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 3px 0;
+      font-size: 0.88rem;
+    }
+
+    .dice-wrap {
+      perspective: 700px;
+      width: 120px;
+      height: 120px;
+      margin: 2px auto 10px;
+      display: grid;
+      place-items: center;
+    }
+
+    .cube {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      transform-style: preserve-3d;
+      transform: rotateX(-20deg) rotateY(25deg);
+      transition: transform 950ms cubic-bezier(0.2, 0.78, 0.2, 1);
+    }
+
+    .face {
+      position: absolute;
+      width: 76px;
+      height: 76px;
+      border: 2px solid var(--line);
+      background: var(--dice);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      padding: 8px;
+      gap: 3px;
+      box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.03);
+    }
+
+    .pip {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: transparent;
+      justify-self: center;
+      align-self: center;
+    }
+
+    .on { background: var(--dot); }
+
+    .one { transform: rotateY(0deg) translateZ(38px); }
+    .two { transform: rotateY(90deg) translateZ(38px); }
+    .three { transform: rotateX(90deg) translateZ(38px); }
+    .four { transform: rotateX(-90deg) translateZ(38px); }
+    .five { transform: rotateY(-90deg) translateZ(38px); }
+    .six { transform: rotateY(180deg) translateZ(38px); }
+
+    .roll-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      min-height: 1rem;
+      text-align: center;
+    }
+
+    .inventory-list {
+      display: grid;
+      gap: 6px;
+      max-height: 22vh;
+      overflow: auto;
+      font-size: 0.78rem;
+    }
+
+    .inv-item {
+      border: 1px solid var(--line);
+      background: #101010;
+      padding: 6px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .inv-item button {
+      padding: 4px 6px;
+      font-size: 0.72rem;
+    }
+
+    .scene-strip {
+      border: 1px solid var(--line);
+      background: #0b0b0b;
+      margin-bottom: 10px;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: 62px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .scene-sprite {
+      width: 54px;
+      height: 54px;
+      border: 1px solid #7a7a7a;
+      background: #121212;
+      display: grid;
+      place-items: center;
+      font-size: 0.92rem;
+      letter-spacing: 0.08em;
+    }
+
+    .scene-caption {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.25;
+    }
+
+    .story {
+      border: 1px solid var(--line);
+      background: #090909;
+      padding: 12px;
+      min-height: 0;
+      max-height: none;
+      overflow: auto;
+      line-height: 1.4;
+      font-size: 0.93rem;
+      white-space: pre-wrap;
+      margin-bottom: 0;
+    }
+
+    .choices {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-bottom: 0;
+      max-height: 24vh;
+      overflow: auto;
+    }
+
+    button {
+      font: inherit;
+      color: var(--ink);
+      background: #101010;
+      border: 1px solid #616161;
+      padding: 10px 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: #171717;
+      border-color: #c8c8c8;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .log {
+      border: 1px solid var(--line);
+      background: #080808;
+      padding: 10px;
+      font-size: 0.74rem;
+      color: #d8d8d8;
+      max-height: none;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .log-col #logPanel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .log-col #logPanel .log {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .as-popout {
+      position: static;
+      transform: none;
+      width: auto;
+      max-height: none;
+      overflow: hidden;
+      z-index: auto;
+      display: block;
+      box-shadow: none;
+    }
+
+    .as-popout.open {
+      display: block;
+    }
+
+    .popout-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .popout-head button {
+      display: none;
+      padding: 4px 8px;
+      font-size: 0.74rem;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 15;
+      display: none !important;
+    }
+
+    .overlay.open {
+      display: block;
+    }
+
+    @media (max-width: 920px) {
+      .game {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
+        height: calc(100vh - 10px);
+      }
+      .left {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 10px;
+        overflow: visible;
+      }
+
+      .right {
+        padding: 10px;
+        grid-template-rows: auto minmax(120px, 1fr) auto;
+      }
+
+      .log-col {
+        border-left: 0;
+        padding: 0;
+        background: transparent;
+      }
+
+      .quick-nav {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      #heroPanel,
+      #inventoryPanel,
+      #logPanel {
+        display: none;
+      }
+
+      .as-popout {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(620px, calc(100vw - 24px));
+        max-height: min(78vh, 740px);
+        overflow: auto;
+        z-index: 20;
+        box-shadow: 0 0 0 1px #000, 0 0 30px rgba(0, 0, 0, 0.8);
+      }
+
+      .as-popout.open {
+        display: block !important;
+      }
+
+      .popout-head button {
+        display: inline-block;
+      }
+
+      .overlay {
+        display: none;
+      }
+
+      .overlay.open {
+        display: block !important;
+      }
+
+      .scene-strip {
+        margin-bottom: 6px;
+        padding: 6px;
+      }
+
+      .story {
+        min-height: 120px;
+      }
+
+      .choices {
+        max-height: 22vh;
+      }
+
+      .choices button {
+        padding: 8px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <section class="left">
+      <h1>Black Banner Road</h1>
+      <div class="subtitle">Old-school d6 fantasy</div>
+
+      <div class="panel quick-nav">
+        <button data-panel="heroPanel">Hero</button>
+        <button data-panel="inventoryPanel">Inventory</button>
+        <button data-panel="logPanel">Log</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Quick Status</div>
+        <div class="stats-row"><span>Lvl</span><strong id="level">1</strong></div>
+        <div class="stats-row"><span>HP</span><strong id="hp">-</strong></div>
+        <div class="stats-row"><span>Coins</span><strong id="coins">0</strong></div>
+        <div class="stats-row"><span>Sigils</span><strong id="sigils">0 / 3</strong></div>
+      </div>
+
+      <div class="panel" id="dicePanel">
+        <div class="panel-title">3D d6</div>
+        <div class="dice-wrap">
+          <div class="cube" id="cube">
+            <div class="face one"></div>
+            <div class="face two"></div>
+            <div class="face three"></div>
+            <div class="face four"></div>
+            <div class="face five"></div>
+            <div class="face six"></div>
+          </div>
+        </div>
+        <div class="roll-label" id="rollLabel">The die waits in silence.</div>
+      </div>
+
+      <div class="panel" id="installPanel" style="display:none">
+        <div class="panel-title">App Install</div>
+        <button id="installBtn" disabled>Install App</button>
+        <div class="roll-label" id="installHint">Install prompt not ready.</div>
+      </div>
+
+      <div class="panel as-popout" id="heroPanel">
+        <div class="popout-head">
+          <div class="panel-title">Hero Sheet</div>
+          <button data-close="heroPanel">Close</button>
+        </div>
+        <div class="stats-row"><span>Level</span><strong id="levelFull">1</strong></div>
+        <div class="stats-row"><span>XP</span><strong id="xp">0 / 1000</strong></div>
+        <div class="stats-row"><span>Coins</span><strong id="coinsFull">0</strong></div>
+        <div class="stats-row"><span>Zone</span><strong id="zone">-</strong></div>
+        <div class="stats-row"><span>Sigils</span><strong id="sigilsFull">0 / 3</strong></div>
+        <hr style="border-color:#2b2b2b" />
+        <div class="stats-row"><span>Might</span><strong id="might">-</strong></div>
+        <div class="stats-row"><span>Wits</span><strong id="wits">-</strong></div>
+        <div class="stats-row"><span>Luck</span><strong id="luck">-</strong></div>
+        <div class="stats-row"><span>Health</span><strong id="hpFull">-</strong></div>
+      </div>
+
+      <div class="panel as-popout" id="inventoryPanel">
+        <div class="popout-head">
+          <div class="panel-title">Inventory (Use Anytime)</div>
+          <button data-close="inventoryPanel">Close</button>
+        </div>
+        <div class="inventory-list" id="inventory"></div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="scene-strip">
+        <div class="scene-sprite" id="sceneSprite">{??}</div>
+        <div class="scene-caption" id="sceneCaption">No scene loaded.</div>
+      </div>
+      <div class="story" id="story"></div>
+      <div class="choices" id="choices"></div>
+    </section>
+
+    <section class="log-col">
+      <div class="panel as-popout" id="logPanel">
+        <div class="popout-head">
+          <div class="panel-title">Battle Log</div>
+          <button data-close="logPanel">Close</button>
+        </div>
+        <div class="log" id="log"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="overlay" id="overlay"></div>
+
+  <script>
+    const SAVE_KEY = "black_banner_save_v3";
+    const ENDINGS_KEY = "black_banner_endings_v2";
+
+    const cube = document.getElementById("cube");
+    const storyEl = document.getElementById("story");
+    const logEl = document.getElementById("log");
+    const choicesEl = document.getElementById("choices");
+    const rollLabel = document.getElementById("rollLabel");
+    const inventoryEl = document.getElementById("inventory");
+    const sceneSpriteEl = document.getElementById("sceneSprite");
+    const sceneCaptionEl = document.getElementById("sceneCaption");
+    const overlayEl = document.getElementById("overlay");
+    const installPanelEl = document.getElementById("installPanel");
+    const installBtn = document.getElementById("installBtn");
+    const installHint = document.getElementById("installHint");
+
+    let deferredInstallPrompt = null;
+    let installPromptSeen = false;
+
+    const statEls = {
+      level: document.getElementById("level"),
+      levelFull: document.getElementById("levelFull"),
+      xp: document.getElementById("xp"),
+      coins: document.getElementById("coins"),
+      coinsFull: document.getElementById("coinsFull"),
+      zone: document.getElementById("zone"),
+      sigils: document.getElementById("sigils"),
+      sigilsFull: document.getElementById("sigilsFull"),
+      might: document.getElementById("might"),
+      wits: document.getElementById("wits"),
+      luck: document.getElementById("luck"),
+      hp: document.getElementById("hp"),
+      hpFull: document.getElementById("hpFull")
+    };
+
+    const faces = {
+      1: { x: 0, y: 0 },
+      2: { x: 0, y: -90 },
+      3: { x: -90, y: 0 },
+      4: { x: 90, y: 0 },
+      5: { x: 0, y: 90 },
+      6: { x: 0, y: 180 }
+    };
+
+    const baseEnemies = [
+      { id: "hound", name: "Grave Hound", might: 5, defense: 3, hp: 12, sprite: "enemy_hound" },
+      { id: "raider", name: "Road Raider", might: 6, defense: 2, hp: 11, sprite: "enemy_raider" },
+      { id: "reaver", name: "Fen Reaver", might: 6, defense: 4, hp: 13, sprite: "enemy_reaver" },
+      { id: "pike", name: "Pike Brigand", might: 7, defense: 3, hp: 14, sprite: "enemy_pike" },
+      { id: "wraith", name: "Ash Wraith", might: 5, defense: 5, hp: 12, sprite: "enemy_wraith" },
+      { id: "marauder", name: "Marauder Veteran", might: 8, defense: 4, hp: 15, sprite: "enemy_marauder" }
+    ];
+
+    const towns = [
+      { name: "Crow Rest", desc: "A timber palisade town where hunters smoke eel and trade old maps." },
+      { name: "Dustwell", desc: "A dry mining stop. Lantern watchmen and scarred well-keepers guard every gate." },
+      { name: "Lampford", desc: "Stone bridges and shrine lamps. Priests, ferrymen, and weavers keep it alive." },
+      { name: "Graybridge", desc: "A market under broken arches where tinkers and ex-soldiers barter for steel." },
+      { name: "Mirecross", desc: "Reed huts on raised planks. Herbalists and marsh-guides whisper weather signs." },
+      { name: "Northwick", desc: "Cold hill town with bell towers. Millers and archers stand late watches." }
+    ];
+
+    const bossLocations = [
+      {
+        key: "watchtower",
+        name: "Bleakwatch Tower",
+        short: "A leaning tower over the road, ringed with rusted bells.",
+        sigil: "Iron Sigil",
+        final: false,
+        boss: { name: "Gallows Knight", might: 11, defense: 8, hp: 36, xp: 1600, coins: 42, sprite: "boss_gallows" }
+      },
+      {
+        key: "crypt",
+        name: "Saltcrypt Hollow",
+        short: "White vaults beneath dead fields where names are carved into salt.",
+        sigil: "Pale Sigil",
+        final: false,
+        boss: { name: "Salt Widow", might: 12, defense: 9, hp: 40, xp: 1800, coins: 48, sprite: "boss_widow" }
+      },
+      {
+        key: "monastery",
+        name: "Cinder Monastery",
+        short: "Burnt cloisters and cracked braziers on a high volcanic ridge.",
+        sigil: "Ember Sigil",
+        final: false,
+        boss: { name: "Cinder Abbot", might: 13, defense: 10, hp: 44, xp: 2100, coins: 58, sprite: "boss_abbot" }
+      },
+      {
+        key: "keep",
+        name: "Ashen Keep",
+        short: "The black throne citadel where the banners never lower.",
+        sigil: null,
+        final: true,
+        boss: { name: "Black Banner Knight", might: 15, defense: 11, hp: 58, xp: 3400, coins: 140, sprite: "boss_knight" }
+      }
+    ];
+
+    const sprites = {
+      hero: [
+        "  /\\",
+        " [##]",
+        "  ||",
+        " /__\\"
+      ].join("\n"),
+      town: [
+        " [][][]",
+        " |__| ",
+        " /||\\ ",
+        "/_||_\\"
+      ].join("\n"),
+      ruins: [
+        " _  _ ",
+        "| || |",
+        "|_  _|",
+        "  ||  "
+      ].join("\n"),
+      item_potion: [
+        "  __  ",
+        " |==| ",
+        " |__| ",
+        "  ||  "
+      ].join("\n"),
+      item_tonic: [
+        "  __  ",
+        " /++\\ ",
+        " \\__/ ",
+        "  ||  "
+      ].join("\n"),
+      enemy_hound: [
+        " /\\_/\\",
+        "( o.o )",
+        " > ^ <"
+      ].join("\n"),
+      enemy_raider: [
+        "  /|  ",
+        " [o]- ",
+        " / \\  "
+      ].join("\n"),
+      enemy_reaver: [
+        " .--. ",
+        "(o  o)",
+        " /==\\ "
+      ].join("\n"),
+      enemy_pike: [
+        "  /|  ",
+        " [##]>",
+        " /  \\ "
+      ].join("\n"),
+      enemy_wraith: [
+        " .~~. ",
+        "( .. )",
+        " \\__/ "
+      ].join("\n"),
+      enemy_marauder: [
+        " [##] ",
+        " /||\\ ",
+        " /  \\ "
+      ].join("\n"),
+      boss_gallows: [
+        "  /\\  ",
+        " [XX] ",
+        " /||\\ ",
+        "/_||_\\"
+      ].join("\n"),
+      boss_widow: [
+        " /\\_/\\",
+        "( x x )",
+        " /|||\\",
+        "  / \\ "
+      ].join("\n"),
+      boss_abbot: [
+        " .==. ",
+        "[####]",
+        " /||\\ ",
+        " /__\\ "
+      ].join("\n"),
+      boss_knight: [
+        "  /\\  ",
+        " [@@] ",
+        " /||\\ ",
+        "/_/\\_\\"
+      ].join("\n")
+    };
+
+    const state = {
+      started: false,
+      gameOver: false,
+      level: 1,
+      xp: 0,
+      coins: 0,
+      step: 0,
+      zone: "Border Verge",
+      sigils: [],
+      defeatedBosses: {
+        watchtower: false,
+        crypt: false,
+        monastery: false,
+        keep: false
+      },
+      baseStats: {
+        might: 0,
+        wits: 0,
+        luck: 0,
+        health: 0
+      },
+      hp: 0,
+      maxHp: 0,
+      inventory: [],
+      effects: [],
+      tracking: {
+        sinceTown: 0,
+        sinceRuin: 0
+      }
+    };
+
+    let rolling = false;
+
+    function rnd(max) {
+      return Math.floor(Math.random() * max);
+    }
+
+    function pick(list) {
+      return list[rnd(list.length)];
+    }
+
+    function addStory(text) {
+      storyEl.textContent += (storyEl.textContent ? "\n\n" : "") + text;
+      storyEl.scrollTop = storyEl.scrollHeight;
+    }
+
+    function addLog(text) {
+      logEl.textContent += text + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function openPopout(panelId) {
+      const panel = document.getElementById(panelId);
+      if (!panel) return;
+      for (const pop of document.querySelectorAll(".as-popout")) {
+        pop.classList.remove("open");
+      }
+      panel.classList.add("open");
+      overlayEl.classList.add("open");
+    }
+
+    function closePopouts() {
+      for (const pop of document.querySelectorAll(".as-popout")) {
+        pop.classList.remove("open");
+      }
+      overlayEl.classList.remove("open");
+    }
+
+    function setupPopouts() {
+      for (const opener of document.querySelectorAll("[data-panel]")) {
+        opener.addEventListener("click", () => {
+          openPopout(opener.dataset.panel);
+        });
+      }
+
+      for (const closer of document.querySelectorAll("[data-close]")) {
+        closer.addEventListener("click", closePopouts);
+      }
+
+      overlayEl.addEventListener("click", closePopouts);
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closePopouts();
+        }
+      });
+    }
+
+    function isStandaloneApp() {
+      return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    }
+
+    function setInstallPanelVisible(visible) {
+      installPanelEl.style.display = visible ? "block" : "none";
+    }
+
+    function setInstallState(text, canInstall) {
+      installHint.textContent = text;
+      installBtn.disabled = !canInstall;
+    }
+
+    function setupInstallPrompt() {
+      if (isStandaloneApp()) {
+        setInstallPanelVisible(false);
+        return;
+      }
+
+      const supportLikely = "serviceWorker" in navigator;
+      if (!supportLikely) {
+        setInstallPanelVisible(false);
+        return;
+      }
+
+      setInstallPanelVisible(false);
+      setInstallState("Waiting for install prompt...", false);
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        installPromptSeen = true;
+        setInstallPanelVisible(true);
+        setInstallState("Ready to install. Tap the button.", true);
+      });
+
+      window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        setInstallPanelVisible(false);
+      });
+
+      installBtn.addEventListener("click", async () => {
+        if (!deferredInstallPrompt) {
+          return;
+        }
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice.outcome === "accepted") {
+          setInstallPanelVisible(false);
+        } else {
+          setInstallState("Install dismissed. You can try again.", true);
+        }
+      });
+
+      window.setTimeout(() => {
+        if (!installPromptSeen && !isStandaloneApp()) {
+          setInstallPanelVisible(false);
+        }
+      }, 3000);
+    }
+
+    function setScene(sprite, caption) {
+      sceneSpriteEl.textContent = sprite;
+      sceneCaptionEl.textContent = caption;
+    }
+
+    function showSpriteInStory(label, key) {
+      const art = sprites[key];
+      if (!art) {
+        return;
+      }
+      addStory(`${label}\n${art}`);
+    }
+
+    function makePips(faceEl, onIndexes) {
+      faceEl.innerHTML = "";
+      for (let i = 1; i <= 9; i++) {
+        const pip = document.createElement("div");
+        pip.className = "pip" + (onIndexes.includes(i) ? " on" : "");
+        faceEl.appendChild(pip);
+      }
+    }
+
+    function buildDieFaces() {
+      makePips(document.querySelector(".one"), [5]);
+      makePips(document.querySelector(".two"), [1, 9]);
+      makePips(document.querySelector(".three"), [1, 5, 9]);
+      makePips(document.querySelector(".four"), [1, 3, 7, 9]);
+      makePips(document.querySelector(".five"), [1, 3, 5, 7, 9]);
+      makePips(document.querySelector(".six"), [1, 3, 4, 6, 7, 9]);
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function animateDie(result) {
+      const orientation = faces[result];
+      const spinX = 720 + rnd(720);
+      const spinY = 720 + rnd(720);
+      cube.style.transform = `rotateX(${orientation.x + spinX}deg) rotateY(${orientation.y + spinY}deg)`;
+      await wait(980);
+      cube.style.transition = "none";
+      cube.style.transform = `rotateX(${orientation.x}deg) rotateY(${orientation.y}deg)`;
+      void cube.offsetHeight;
+      cube.style.transition = "transform 950ms cubic-bezier(0.2, 0.78, 0.2, 1)";
+    }
+
+    async function rollD6(reason) {
+      while (rolling) {
+        await wait(30);
+      }
+      rolling = true;
+      disableChoices(true);
+      rollLabel.textContent = reason + "... rolling d6";
+      const result = 1 + rnd(6);
+      await animateDie(result);
+      rollLabel.textContent = `${reason}: ${result}`;
+      addLog(`[d6] ${reason} => ${result}`);
+      rolling = false;
+      disableChoices(false);
+      return result;
+    }
+
+    function disableChoices(disabled) {
+      for (const btn of choicesEl.querySelectorAll("button")) {
+        btn.disabled = disabled || btn.dataset.forceDisabled === "1";
+      }
+      for (const btn of inventoryEl.querySelectorAll("button")) {
+        btn.disabled = disabled || btn.dataset.forceDisabled === "1";
+      }
+    }
+
+    function setChoices(choices) {
+      choicesEl.innerHTML = "";
+      for (const choice of choices) {
+        const btn = document.createElement("button");
+        btn.textContent = choice.label;
+        const forced = Boolean(choice.disabled);
+        if (forced) {
+          btn.dataset.forceDisabled = "1";
+          btn.disabled = true;
+        }
+        if (!forced) {
+          btn.addEventListener("click", async () => {
+            disableChoices(true);
+            await choice.action();
+          });
+        }
+        choicesEl.appendChild(btn);
+      }
+    }
+
+    function askChoice(choices) {
+      return new Promise((resolve) => {
+        setChoices(choices.map((c) => ({
+          label: c.label,
+          disabled: c.disabled,
+          action: async () => resolve(c)
+        })));
+      });
+    }
+
+    function getZoneByStep(step) {
+      if (step < 4) return "Border Verge";
+      if (step < 8) return "Raven Marsh";
+      if (step < 12) return "Fellstone Road";
+      if (step < 16) return "Ashwind Heights";
+      return "Ashen Keep March";
+    }
+
+    function dangerTier() {
+      if (state.step < 4) return 0;
+      if (state.step < 9) return 1;
+      if (state.step < 14) return 2;
+      return 3;
+    }
+
+    function levelStatBonus() {
+      return (state.level - 1) * 2;
+    }
+
+    function effectBonus(statName) {
+      return state.effects
+        .filter((e) => e.stat === statName)
+        .reduce((sum, e) => sum + e.amount, 0);
+    }
+
+    function statValue(statName) {
+      return state.baseStats[statName] + levelStatBonus() + effectBonus(statName);
+    }
+
+    function recalcVitals(levelGainCount) {
+      const oldMax = state.maxHp;
+      state.maxHp = state.baseStats.health + levelStatBonus();
+      if (!oldMax) {
+        state.hp = state.maxHp;
+        return;
+      }
+      if (levelGainCount > 0) {
+        state.hp = Math.min(state.maxHp, state.hp + levelGainCount * 2);
+      } else {
+        state.hp = Math.min(state.maxHp, state.hp);
+      }
+    }
+
+    function updateStats() {
+      state.zone = getZoneByStep(state.step);
+      statEls.level.textContent = state.level;
+      statEls.levelFull.textContent = state.level;
+      const nextXp = state.level >= 20 ? "MAX" : `${state.level * 1000}`;
+      statEls.xp.textContent = `${state.xp} / ${nextXp}`;
+      statEls.coins.textContent = state.coins;
+      statEls.coinsFull.textContent = state.coins;
+      statEls.zone.textContent = state.zone;
+      statEls.sigils.textContent = `${state.sigils.length} / 3`;
+      statEls.sigilsFull.textContent = `${state.sigils.length} / 3`;
+      statEls.might.textContent = `${statValue("might")} (base ${state.baseStats.might})`;
+      statEls.wits.textContent = `${statValue("wits")} (base ${state.baseStats.wits})`;
+      statEls.luck.textContent = `${statValue("luck")} (base ${state.baseStats.luck})`;
+      statEls.hp.textContent = `${state.hp} / ${state.maxHp} (base ${state.baseStats.health})`;
+      statEls.hpFull.textContent = `${state.hp} / ${state.maxHp} (base ${state.baseStats.health})`;
+      renderInventory();
+    }
+
+    function renderInventory() {
+      inventoryEl.innerHTML = "";
+      if (!state.inventory.length) {
+        const row = document.createElement("div");
+        row.className = "inv-item";
+        row.textContent = "Empty pack.";
+        inventoryEl.appendChild(row);
+        return;
+      }
+
+      for (const item of state.inventory) {
+        const row = document.createElement("div");
+        row.className = "inv-item";
+        const label = document.createElement("div");
+        label.textContent = `${item.name} x${item.qty}`;
+        const useBtn = document.createElement("button");
+        useBtn.textContent = "Use";
+        if (item.qty <= 0 || rolling || state.gameOver) {
+          useBtn.dataset.forceDisabled = "1";
+          useBtn.disabled = true;
+        }
+        useBtn.addEventListener("click", async () => {
+          if (item.qty <= 0 || rolling || state.gameOver) {
+            return;
+          }
+          await useItem(item.id);
+        });
+        row.appendChild(label);
+        row.appendChild(useBtn);
+        inventoryEl.appendChild(row);
+      }
+    }
+
+    function addItem(id, qty) {
+      const catalog = {
+        heal: { id: "heal", name: "Field Potion", type: "heal" },
+        iron: { id: "iron", name: "Iron Tonic", type: "buff", stat: "might", amount: 3, turns: 4 },
+        owl: { id: "owl", name: "Owl Draft", type: "buff", stat: "wits", amount: 3, turns: 4 },
+        fate: { id: "fate", name: "Fate Philter", type: "buff", stat: "luck", amount: 3, turns: 4 }
+      };
+      const def = catalog[id];
+      if (!def) return;
+      const existing = state.inventory.find((it) => it.id === id);
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        state.inventory.push({ ...def, qty });
+      }
+      updateStats();
+    }
+
+    async function useItem(id) {
+      const item = state.inventory.find((it) => it.id === id);
+      if (!item || item.qty < 1) return;
+      item.qty -= 1;
+
+      if (item.type === "heal") {
+        const a = await rollD6("Potion heal I");
+        const b = await rollD6("Potion heal II");
+        const heal = a + b + Math.floor(statValue("luck") / 6);
+        state.hp = Math.min(state.maxHp, state.hp + heal);
+        addStory(`You drink a Field Potion and restore ${heal} health.`);
+        showSpriteInStory("{IT} Field Potion", "item_potion");
+      }
+
+      if (item.type === "buff") {
+        state.effects.push({ name: item.name, stat: item.stat, amount: item.amount, turns: item.turns });
+        addStory(`${item.name} grants +${item.amount} ${item.stat.toUpperCase()} for ${item.turns} turns.`);
+        showSpriteInStory("{IT} Tonic", "item_tonic");
+      }
+
+      state.inventory = state.inventory.filter((it) => it.qty > 0);
+      updateStats();
+      autoSave("Used item");
+    }
+
+    function tickEffects() {
+      if (!state.effects.length) return;
+      for (const e of state.effects) {
+        e.turns -= 1;
+      }
+      const expired = state.effects.filter((e) => e.turns <= 0);
+      state.effects = state.effects.filter((e) => e.turns > 0);
+      if (expired.length) {
+        addStory(expired.map((e) => `${e.name} fades.`).join(" "));
+      }
+    }
+
+    function gainCoins(amount, source) {
+      state.coins += amount;
+      addStory(`You gain ${amount} coins from ${source}.`);
+      addLog(`coins +${amount} (${source})`);
+      updateStats();
+    }
+
+    function gainXp(amount, source) {
+      state.xp += amount;
+      addStory(`You earn ${amount} XP from ${source}.`);
+      addLog(`xp +${amount} (${source})`);
+
+      let leveled = 0;
+      while (state.level < 20 && state.xp >= state.level * 1000) {
+        state.level += 1;
+        leveled += 1;
+      }
+
+      if (leveled > 0) {
+        recalcVitals(leveled);
+        addStory(`You reach level ${state.level}. All core stats and health rise by +${leveled * 2}.`);
+      }
+      updateStats();
+    }
+
+    async function statCheck(statName, target, reason) {
+      const roll = await rollD6(reason);
+      const total = roll + statValue(statName);
+      const pass = total >= target;
+      addLog(`check: ${statName} ${statValue(statName)} + ${roll} = ${total} vs ${target} => ${pass ? "PASS" : "FAIL"}`);
+      return { pass, roll, total };
+    }
+
+    function damageRangeFromMight(mightValue) {
+      const maxDamage = Math.max(4, Math.floor(mightValue / 2) + 4);
+      const minDamage = Math.max(1, Math.floor(maxDamage * 0.6));
+      return { minDamage, maxDamage };
+    }
+
+    async function rollDamageByMight(mightValue, reason) {
+      const { minDamage, maxDamage } = damageRangeFromMight(mightValue);
+      const roll = await rollD6(reason);
+      const span = maxDamage - minDamage;
+      const dmg = minDamage + Math.floor(((roll - 1) / 5) * span);
+      addLog(`damage range ${minDamage}-${maxDamage}, result ${dmg}`);
+      return dmg;
+    }
+
+    async function applyDamage(amount, source) {
+      if (state.step <= 2 && amount > 1 && !source.includes("Black Banner Knight")) {
+        amount -= 1;
+      }
+      state.hp = Math.max(0, state.hp - amount);
+      addStory(`${source} deals ${amount} damage.`);
+      updateStats();
+      if (state.hp <= 0) {
+        await endGame(false, "You fall on the black road. The banner of the tyrant still shadows the valley.");
+      }
+    }
+
+    function scaledEnemy() {
+      const pool = state.step <= 2 ? baseEnemies.slice(0, 3) : baseEnemies;
+      const base = pick(pool);
+      const tier = dangerTier();
+      const levelBoost = Math.max(0, state.level - 1);
+      const scaling = Math.floor(levelBoost / 2) + tier;
+      const might = base.might + scaling + rnd(2);
+      const defense = base.defense + Math.floor(scaling / 2);
+      const hp = base.hp + scaling * 3 + rnd(4);
+      const xp = 220 + state.level * 75 + tier * 45 + rnd(70);
+      const coins = 3 + Math.floor(state.level / 2) + tier + rnd(6);
+      return {
+        name: base.name,
+        might,
+        defense,
+        hp,
+        xp,
+        coins,
+        sprite: base.sprite,
+        boss: false
+      };
+    }
+
+    function cloneBoss(location) {
+      const levelBoost = Math.max(0, state.level - 1);
+      const tier = dangerTier();
+      return {
+        name: location.boss.name,
+        might: location.boss.might + Math.floor(levelBoost / 2) + tier,
+        defense: location.boss.defense + Math.floor(levelBoost / 3) + Math.floor(tier / 2),
+        hp: location.boss.hp + levelBoost * 4 + tier * 4,
+        xp: location.boss.xp,
+        coins: location.boss.coins,
+        sprite: location.boss.sprite,
+        boss: true
+      };
+    }
+
+    async function enemyTurn(enemy) {
+      if (state.gameOver) return;
+
+      if (enemy.boss && !enemy.enraged && enemy.hp <= Math.floor(enemy.maxHp / 2)) {
+        enemy.enraged = true;
+        enemy.might += 2;
+        enemy.defense += 1;
+        addStory(`${enemy.name} enters a rage phase. Might and defense rise.`);
+      }
+
+      let attackBonus = 0;
+      let extraStrike = false;
+      if (enemy.boss) {
+        const tactic = await rollD6(`${enemy.name} tactic`);
+        if (tactic === 4) {
+          attackBonus = 2;
+          addStory(`${enemy.name} uses a feinting advance. The attack comes faster.`);
+        }
+        if (tactic === 5) {
+          enemy.guard = 2;
+          addStory(`${enemy.name} hardens stance. The next hits are partially blocked.`);
+        }
+        if (tactic === 6) {
+          extraStrike = true;
+          addStory(`${enemy.name} unleashes a twin assault.`);
+        }
+      }
+
+      addStory(`${enemy.name} surges forward.`);
+      const enemyAtk = (await rollD6(`${enemy.name} attack`)) + enemy.might + attackBonus;
+      const playerDef = (await rollD6("Your defense")) + Math.floor(statValue("wits") / 2) + 2;
+
+      if (enemyAtk > playerDef) {
+        const dmg = await rollDamageByMight(enemy.might, `${enemy.name} damage`);
+        await applyDamage(dmg, enemy.name);
+      } else {
+        addStory("You avoid the strike.");
+      }
+
+      if (!state.gameOver && extraStrike) {
+        const atk2 = (await rollD6(`${enemy.name} second strike`)) + Math.floor(enemy.might * 0.85);
+        const def2 = (await rollD6("Your second defense")) + Math.floor(statValue("wits") / 2) + 1;
+        if (atk2 > def2) {
+          const dmg2 = await rollDamageByMight(Math.max(1, enemy.might - 1), `${enemy.name} second damage`);
+          await applyDamage(Math.max(1, dmg2 - 1), enemy.name);
+        } else {
+          addStory("You barely avoid the follow-up strike.");
+        }
+      }
+    }
+
+    async function combat(enemy) {
+      enemy.maxHp = enemy.hp;
+      enemy.guard = 0;
+      enemy.enraged = false;
+      setScene(enemy.boss ? "{BO}" : "{EN}", `Combat: ${enemy.name}`);
+      addStory(`Combat begins: ${enemy.name} [Might ${enemy.might}, Defense ${enemy.defense}, HP ${enemy.hp}]`);
+      showSpriteInStory(enemy.boss ? "{BO} Boss" : "{EN} Enemy", enemy.sprite);
+
+      while (!state.gameOver && enemy.hp > 0) {
+        const options = [
+          { label: "Strike", key: "strike" },
+          { label: "Counter stance (Wits)", key: "counter" }
+        ];
+        if (!enemy.boss) {
+          options.push({ label: "Risk escape", key: "escape" });
+        }
+
+        const action = await askChoice(options);
+
+        if (action.key === "strike") {
+          const atk = (await rollD6("Your attack")) + statValue("might");
+          const def = (await rollD6(`${enemy.name} defense`)) + enemy.defense;
+          if (atk >= def) {
+            let dmg = await rollDamageByMight(statValue("might"), "Your damage");
+            if (enemy.guard > 0) {
+              enemy.guard -= 1;
+              dmg = Math.max(1, dmg - 2);
+              addStory(`${enemy.name}'s guard absorbs part of the blow.`);
+            }
+            enemy.hp = Math.max(0, enemy.hp - dmg);
+            addStory(`You hit ${enemy.name} for ${dmg}. (${enemy.hp} HP left)`);
+          } else {
+            addStory("Your strike fails to break through.");
+          }
+        }
+
+        if (action.key === "counter") {
+          const witsTarget = 11 + Math.floor(state.level / 2) + Math.floor(enemy.might / 6);
+          const check = await statCheck("wits", witsTarget, "Counter timing");
+          if (check.pass) {
+            let dmg = await rollDamageByMight(statValue("might"), "Counter damage");
+            if (enemy.guard > 0) {
+              enemy.guard -= 1;
+              dmg = Math.max(1, dmg - 2);
+              addStory(`${enemy.name}'s guard weakens your counter.`);
+            }
+            enemy.hp = Math.max(0, enemy.hp - dmg);
+            addStory(`Counter success. You deal ${dmg}. (${enemy.hp} HP left)`);
+          } else {
+            addStory("Counter fails. You lose the opening.");
+          }
+        }
+
+        if (action.key === "escape") {
+          const run = await statCheck("luck", 10 + Math.floor(state.level / 2), "Escape test");
+          if (run.pass) {
+            addStory(`You break away from ${enemy.name}.`);
+            tickEffects();
+            autoSave("Escaped battle");
+            return "escaped";
+          }
+          addStory("Escape fails. The enemy catches you.");
+          const punish = await rollDamageByMight(enemy.might, "Escape punish");
+          await applyDamage(punish, enemy.name);
+        }
+
+        updateStats();
+        if (state.gameOver || enemy.hp <= 0) break;
+
+        await enemyTurn(enemy);
+        tickEffects();
+        updateStats();
+      }
+
+      if (state.gameOver) return "lost";
+
+      addStory(`${enemy.name} is defeated.`);
+      gainXp(enemy.xp, enemy.name);
+      gainCoins(enemy.coins, `${enemy.name}'s remains`);
+
+      const corpseRoll = await rollD6("Search body");
+      if (corpseRoll >= 4) {
+        addItem("heal", 1);
+        addStory("You search the remains and recover a Field Potion.");
+        showSpriteInStory("{IT} Loot", "item_potion");
+      }
+
+      autoSave(`Defeated ${enemy.name}`);
+      return "won";
+    }
+
+    async function townScene() {
+      const town = pick(towns);
+      setScene("{TN}", `${town.name}: ${town.desc}`);
+      addStory(`You reach ${town.name}. ${town.desc}`);
+      showSpriteInStory("{TN} Town", "town");
+
+      let inTown = true;
+      while (inTown && !state.gameOver) {
+        const choice = await askChoice([
+          { label: "Rest at inn (10 coins, full heal)", key: "rest" },
+          { label: "Buy Field Potion (12 coins)", key: "heal" },
+          { label: "Buy Iron Tonic (16 coins)", key: "iron" },
+          { label: "Buy Owl Draft (16 coins)", key: "owl" },
+          { label: "Buy Fate Philter (16 coins)", key: "fate" },
+          { label: "Save progress", key: "save" },
+          { label: "Leave town", key: "leave" }
+        ]);
+
+        if (choice.key === "rest") {
+          if (state.coins < 10) {
+            addStory("You do not have enough coins.");
+          } else {
+            state.coins -= 10;
+            state.hp = state.maxHp;
+            addStory("You sleep through the night and recover fully.");
+          }
+        }
+
+        if (["heal", "iron", "owl", "fate"].includes(choice.key)) {
+          const cost = choice.key === "heal" ? 12 : 16;
+          if (state.coins < cost) {
+            addStory("Your purse is too light.");
+          } else {
+            state.coins -= cost;
+            addItem(choice.key, 1);
+            addStory("Purchase complete.");
+            showSpriteInStory("{IT} Shop Item", choice.key === "heal" ? "item_potion" : "item_tonic");
+          }
+        }
+
+        if (choice.key === "save") {
+          saveGame();
+          addStory("You map your route and preserve your campaign.");
+        }
+
+        if (choice.key === "leave") {
+          inTown = false;
+          addStory("You leave the gates behind and return to the road.");
+        }
+
+        updateStats();
+      }
+    }
+
+    async function ruinScene() {
+      const ruins = [
+        "an abandoned wagon strewn with corpses",
+        "an old outpost with shattered watchfires",
+        "a creepy cemetery where headstones lean in the fog"
+      ];
+      const ruin = pick(ruins);
+      setScene("{PL}", `Ruin: ${ruin}`);
+      addStory(`You find ${ruin}. The silence feels wrong.`);
+      showSpriteInStory("{PL} Ruin", "ruins");
+
+      const choice = await askChoice([
+        { label: "Search the ruin", key: "search" },
+        { label: "Leave it", key: "leave" }
+      ]);
+
+      if (choice.key === "leave") {
+        addStory("You leave the ruin untouched.");
+        return;
+      }
+
+      const omenRoll = await rollD6("Ruin omen");
+      const luckGuard = Math.floor(statValue("luck") / 4);
+      const danger = omenRoll + rnd(3) - luckGuard;
+
+      if (danger >= 6) {
+        addStory("Your luck fails. Something hidden attacks.");
+        const result = await combat(scaledEnemy());
+        if (result === "lost") return;
+      } else {
+        const treasureRoll = await rollD6("Treasure luck");
+        const treasureValue = treasureRoll + Math.floor(statValue("luck") / 3);
+        if (treasureValue <= 6) {
+          const coins = 4 + rnd(8);
+          gainCoins(coins, "the ruin");
+        } else if (treasureValue <= 9) {
+          gainCoins(10 + rnd(8), "hidden coffer");
+          addItem("heal", 1);
+          showSpriteInStory("{IT} Found Potion", "item_potion");
+        } else {
+          gainCoins(16 + rnd(10), "sealed cache");
+          addItem(pick(["iron", "owl", "fate"]), 1);
+          gainXp(260 + rnd(120), "ancient war notes");
+          showSpriteInStory("{IT} Rare Find", "item_tonic");
+        }
+      }
+    }
+
+    async function randomEncounter() {
+      const enemy = scaledEnemy();
+      setScene("{EN}", `Encounter: ${enemy.name}`);
+      addStory(`A random encounter: ${enemy.name} blocks your path.`);
+      const choice = await askChoice([
+        { label: "Fight", key: "fight" },
+        { label: "Risk escape", key: "run" }
+      ]);
+
+      if (choice.key === "run") {
+        const run = await statCheck("luck", 10 + Math.floor(state.level / 2), "Ambush escape");
+        if (run.pass) {
+          addStory("You evade the encounter and keep moving.");
+          return;
+        }
+        addStory("You fail to escape and must fight.");
+      }
+
+      await combat(enemy);
+    }
+
+    async function bossLocationOffer() {
+      const available = bossLocations.filter((loc) => !state.defeatedBosses[loc.key]);
+      if (!available.length) {
+        return false;
+      }
+
+      setScene("{PL}", "Forked route: a marked path to major locations.");
+      addStory("At a fork in the road, old war markers point toward major strongholds.");
+
+      const options = [{ label: "Continue on the main road", key: "continue" }];
+      for (const loc of available) {
+        const finalLocked = loc.final && state.sigils.length < 3;
+        options.push({
+          key: loc.key,
+          disabled: finalLocked,
+          label: `${loc.name}${finalLocked ? " (Locked: need 3 sigils)" : ""}`
+        });
+      }
+
+      const choice = await askChoice(options);
+      if (choice.key === "continue") {
+        addStory("You stay on the main road.");
+        if (Math.random() < 0.45) {
+          addStory("Before the fork fades behind you, an enemy emerges onto the road.");
+          await randomEncounter();
+          return true;
+        }
+        return false;
+      }
+
+      const selected = bossLocations.find((loc) => loc.key === choice.key);
+      if (!selected) return false;
+
+      await runBossLocation(selected);
+      return true;
+    }
+
+    async function runBossLocation(location) {
+      setScene(location.final ? "{BO}" : "{PL}", `${location.name}: ${location.short}`);
+      addStory(`You enter ${location.name}. ${location.short}`);
+
+      const guards = location.final ? 3 : 2;
+      addStory(`Guard force detected: ${guards} enemies before the boss.`);
+      for (let i = 0; i < guards; i++) {
+        const guard = scaledEnemy();
+        guard.name = `${guard.name} Guard`;
+        guard.hp += 4;
+        guard.might += 1;
+        const guardResult = await combat(guard);
+        if (guardResult !== "won") {
+          return;
+        }
+      }
+
+      const boss = cloneBoss(location);
+      const result = await combat(boss);
+      if (result !== "won") return;
+
+      state.defeatedBosses[location.key] = true;
+      if (!location.final) {
+        state.sigils.push(location.sigil);
+        addStory(`You claim the ${location.sigil}. Sigils: ${state.sigils.length}/3.`);
+      } else {
+        await endGame(true, "The Black Banner Knight falls. Across the valleys, people pull down the old black standards and ring their bells for dawn.");
+        return;
+      }
+
+      updateStats();
+      autoSave(`Defeated boss at ${location.name}`);
+    }
+
+    async function travelEvent() {
+      state.step += 1;
+      state.zone = getZoneByStep(state.step);
+      updateStats();
+
+      if (Math.random() < 0.35) {
+        const tookBossPath = await bossLocationOffer();
+        if (tookBossPath || state.gameOver) return;
+      }
+
+      const roadRoll = await rollD6("Road fate");
+      const progress = Math.min(1, state.step / 18);
+      const townChance = (0.16 - progress * 0.05) + Math.min(0.28, state.tracking.sinceTown * 0.06);
+      const ruinChance = (0.14 + progress * 0.03) + Math.min(0.22, state.tracking.sinceRuin * 0.05);
+      let enemyChance = (roadRoll <= 3 ? 0.42 : 0.28) + progress * 0.18;
+      if (state.step <= 2) {
+        enemyChance = Math.max(0.14, enemyChance - 0.16);
+      }
+      const r = Math.random();
+
+      if (r < townChance) {
+        state.tracking.sinceTown = 0;
+        state.tracking.sinceRuin += 1;
+        await townScene();
+        return;
+      }
+
+      if (r < townChance + ruinChance) {
+        state.tracking.sinceRuin = 0;
+        state.tracking.sinceTown += 1;
+        await ruinScene();
+        return;
+      }
+
+      state.tracking.sinceTown += 1;
+      state.tracking.sinceRuin += 1;
+
+      if (Math.random() < enemyChance) {
+        await randomEncounter();
+        return;
+      }
+
+      setScene("{PL}", `${state.zone}: wind and distant crows.`);
+      addStory(`You cross ${state.zone} without battle, but the shadow of the keep grows larger.`);
+    }
+
+    async function gameLoop() {
+      while (!state.gameOver) {
+        updateStats();
+        const choice = await askChoice([
+          { label: "Travel onward", key: "travel" },
+          { label: "Make camp (1d6 heal)", key: "camp" },
+          { label: "Save progress", key: "save" },
+          { label: "Load save", key: "load" }
+        ]);
+
+        if (choice.key === "travel") {
+          await travelEvent();
+          tickEffects();
+          autoSave("Travel step");
+        }
+
+        if (choice.key === "camp") {
+          const heal = await rollD6("Camp healing");
+          state.hp = Math.min(state.maxHp, state.hp + heal);
+          addStory(`You make camp and recover ${heal} health.`);
+          tickEffects();
+          updateStats();
+          autoSave("Camp");
+        }
+
+        if (choice.key === "save") {
+          saveGame();
+          addStory("Campaign saved.");
+        }
+
+        if (choice.key === "load") {
+          const ok = loadGame();
+          addStory(ok ? "Save loaded." : "No valid save found.");
+        }
+      }
+    }
+
+    async function roll3d6(label) {
+      const a = await rollD6(`${label} I`);
+      const b = await rollD6(`${label} II`);
+      const c = await rollD6(`${label} III`);
+      const total = a + b + c;
+      addStory(`${label}: ${a} + ${b} + ${c} = ${total}`);
+      return total;
+    }
+
+    async function roll2d6(label) {
+      const a = await rollD6(`${label} I`);
+      const b = await rollD6(`${label} II`);
+      const total = a + b;
+      addStory(`${label}: ${a} + ${b} = ${total}`);
+      return total;
+    }
+
+    function clearForNewRun() {
+      state.started = true;
+      state.gameOver = false;
+      state.level = 1;
+      state.xp = 0;
+      state.coins = 0;
+      state.step = 0;
+      state.zone = "Border Verge";
+      state.sigils = [];
+      state.defeatedBosses = { watchtower: false, crypt: false, monastery: false, keep: false };
+      state.baseStats = { might: 0, wits: 0, luck: 0, health: 0 };
+      state.hp = 0;
+      state.maxHp = 0;
+      state.inventory = [];
+      state.effects = [];
+      state.tracking = { sinceTown: 0, sinceRuin: 0 };
+      storyEl.textContent = "";
+      logEl.textContent = "";
+      updateStats();
+    }
+
+    async function runIntroSlides() {
+      const slides = [
+        "You are Cael, the last sworn road-warden of the Border Marches. Once, your order kept trade roads safe from raiders and warlords.",
+        "Now the Black Banner Knight rules from Ashen Keep. He burned your hall, shattered the border oath, and taxes villages in blood and grain.",
+        "Every town you pass clings to life behind weak walls. Farmers, ferrymen, and old soldiers all whisper the same prayer: end him before winter.",
+        "To open the keep, you must recover three ancient sigils from enemy strongholds. Survive the road, gather strength, and make the final march."
+      ];
+
+      for (let i = 0; i < slides.length; i++) {
+        setScene("{PN}", `Prologue ${i + 1}/4`);
+        addStory(slides[i]);
+        showSpriteInStory("{PN} You", "hero");
+        await askChoice([{ label: i === slides.length - 1 ? "Roll my fate" : "Continue", key: "next" }]);
+      }
+    }
+
+    async function startNewGame() {
+      clearForNewRun();
+      await runIntroSlides();
+      addStory("Cast your stats. Each one is 3d6.");
+
+      state.baseStats.might = await roll3d6("Might");
+      state.baseStats.wits = await roll3d6("Wits");
+      state.baseStats.luck = await roll3d6("Luck");
+      state.baseStats.health = await roll3d6("Health");
+      state.coins = await roll2d6("Starting coins");
+
+      recalcVitals(0);
+      addItem("heal", 2);
+      updateStats();
+      addStory("Your campaign begins. Gather 3 sigils, then unlock Ashen Keep for the final battle.");
+      autoSave("New run");
+      await gameLoop();
+    }
+
+    function serializeState() {
+      return JSON.stringify({
+        started: state.started,
+        gameOver: state.gameOver,
+        level: state.level,
+        xp: state.xp,
+        coins: state.coins,
+        step: state.step,
+        zone: state.zone,
+        sigils: state.sigils,
+        defeatedBosses: state.defeatedBosses,
+        baseStats: state.baseStats,
+        hp: state.hp,
+        maxHp: state.maxHp,
+        inventory: state.inventory,
+        effects: state.effects,
+        tracking: state.tracking
+      });
+    }
+
+    function saveGame() {
+      localStorage.setItem(SAVE_KEY, serializeState());
+      addLog("save: stored");
+    }
+
+    function autoSave(reason) {
+      if (!state.started || state.gameOver) return;
+      saveGame();
+      addLog(`autosave: ${reason}`);
+    }
+
+    function loadGame() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      try {
+        const data = JSON.parse(raw);
+        Object.assign(state, data);
+        state.started = true;
+        state.gameOver = false;
+        recalcVitals(0);
+        updateStats();
+        return true;
+      } catch (_err) {
+        return false;
+      }
+    }
+
+    function saveEnding(tag) {
+      const raw = localStorage.getItem(ENDINGS_KEY);
+      const endings = raw ? JSON.parse(raw) : [];
+      if (!endings.includes(tag)) endings.push(tag);
+      localStorage.setItem(ENDINGS_KEY, JSON.stringify(endings));
+    }
+
+    async function endGame(victory, text) {
+      state.gameOver = true;
+      saveEnding(victory ? "victory" : "defeat");
+      addStory(text);
+
+      const endings = JSON.parse(localStorage.getItem(ENDINGS_KEY) || "[]");
+      addStory(`Known endings: ${endings.join(", ") || "none"}`);
+
+      const choice = await askChoice([
+        { label: "Begin new campaign", key: "new" },
+        { label: "Load save", key: "load" }
+      ]);
+
+      if (choice.key === "new") {
+        await startNewGame();
+      } else {
+        const ok = loadGame();
+        if (ok) {
+          addStory("Save restored.");
+          await gameLoop();
+        } else {
+          addStory("No save available. Starting a new campaign.");
+          await startNewGame();
+        }
+      }
+    }
+
+    function bootstrapMenu() {
+      updateStats();
+      setScene("{PN}", "The road to Ashen Keep waits.");
+      addStory("Every stat, hit, and decision uses d6. Press Start to begin your campaign.");
+      setChoices([
+        {
+          label: "Start new adventure",
+          action: startNewGame
+        },
+        {
+          label: "Load saved adventure",
+          action: async () => {
+            const ok = loadGame();
+            if (!ok) {
+              addStory("No save found.");
+              return;
+            }
+            addStory("Save loaded. The campaign continues.");
+            await gameLoop();
+          }
+        }
+      ]);
+    }
+
+    buildDieFaces();
+    setupPopouts();
+    setupInstallPrompt();
+    bootstrapMenu();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {
+          addLog("pwa: service worker registration failed");
+        });
+      });
+    }
+  </script>
+</body>
+</html>
